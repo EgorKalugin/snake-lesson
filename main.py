@@ -1,9 +1,10 @@
+import re
 import sys
 from random import randrange
 
 import pygame as pg
 
-from game_objects import Food, MovingDirections, Snake, vec2
+from game_objects import Food, MovingDirections, Snake
 
 
 class GameSettings:
@@ -13,7 +14,7 @@ class GameSettings:
         self.screen = pg.display.set_mode([self.WINDOW_SIZE] * 2)
         self.clock = pg.time.Clock()
 
-        self.step_delay = 150  # мсек. Скорость обновления змейки
+        self.step_delay = 150  # мсек. Определяет скорость движения змейки
         self.time = 0
 
 
@@ -63,7 +64,14 @@ class GameModel(GameSettings):
         # [625, 325] - пример
 
     def set_random_food_position(self):
-        self.food.set_position(self.get_random_position())
+        position = tuple(self.get_random_position())
+        segments = self.snake.get_segments()
+        for segment in segments:
+            if position == segment.center:
+                self.set_random_food_position()
+                return
+
+        self.food.set_position(position)
 
     def set_random_snake_position(self):
         self.snake.set_position(self.get_random_position())
@@ -108,31 +116,25 @@ class GameVeiw(GameSettings):
         GameSettings.__init__(self)
         self.model = model
         self.controller = controller
-        self.model.new_game()
 
     def draw_grid(self):
-        [
+        for x in range(0, self.WINDOW_SIZE, self.TILE_SIZE):
             pg.draw.line(self.screen, [50] * 3, (x, 0), (x, self.WINDOW_SIZE))
-            for x in range(0, self.WINDOW_SIZE, self.TILE_SIZE)
-        ]
-        [
+        for y in range(0, self.WINDOW_SIZE, self.TILE_SIZE):
             pg.draw.line(self.screen, [50] * 3, (0, y), (self.WINDOW_SIZE, y))
-            for y in range(0, self.WINDOW_SIZE, self.TILE_SIZE)
-        ]
 
     def draw(self):
-        # рисуеп поле
+        # рисуем поле
         self.screen.fill("black")
         self.draw_grid()
         # рисуем змейку
-        [
+        for segment in self.model.snake.get_segments():
             pg.draw.rect(self.screen, "green", segment)
-            for segment in self.model.snake.get_segments()
-        ]
         # рисуем еду
         pg.draw.rect(self.screen, "red", self.model.food.get_postion())
 
     def run_game(self):
+        self.model.new_game()
         while True:
             self.controller.check_events()
             self.model.update()
